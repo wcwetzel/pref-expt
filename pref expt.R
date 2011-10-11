@@ -48,7 +48,8 @@ summary(mone)
 
 
 p1 = ggplot(data=dr, aes(x = diff, y = p)) + geom_point(alpha=1, position='jitter') +
-	stat_smooth(method='loess') +
+	stat_smooth(method='loess', fill='NA') +
+	stat_smooth(method="loess",fill=NA,colour="black",linetype=2,geom="ribbon") +
 	scale_x_continuous('Difference in gall abundance') + 
 	scale_y_continuous('Proportion on high density branches') +
 	theme_bw() +
