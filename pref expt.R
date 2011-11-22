@@ -24,7 +24,7 @@ dr= dr[-1,] # didn't keep track of number of galls on 10+ and 4- plants
 # PROPORTION of observations of flies on branches that they were on 10+ branches:
 dr$p = dr$p10 / (dr$p10 + dr$p4)  
 
-
+### I SHould do a hierarchical model where observations within a rep are nested
 ## models: ##
 # binomial with number of observations of flies on 10+ branches as outcome
 m1 = mle2(dr$p10 ~ dbinom(size=dr$p10 + dr$p4, prob=1/(1+exp(a))), 
@@ -35,29 +35,33 @@ AICtab(m1,m2, weights=TRUE)
 plot(p ~ diff, data=dr, ylim=c(0,1), xlim=c(0,30))
 abline(h=0.5)
 
+# normal models with p per replicate
 mx1 = mle2(dr$p ~ dnorm(mean=prob, sd=sd), start=list(prob=0.5, sd=1),
 	data=dr)
 mx2 = mle2(dr$p ~ dnorm(mean=a + b * dr$diff, sd=sd), start=list(a=0.5, b=0, sd=1),
 	data=dr)
-mx2log = mle2(dr$p ~ dnorm(mean=a + b * log(dr$diff), sd=sd), start=list(a=0.5, b=0, sd=1),
+mx3 = mle2(dr$p ~ dnorm(mean=a * dr$diff / (b + dr$diff ), sd=sd), start=list(a=0.5, b=1, sd=1),
 	data=dr)
-abline(mx2)
-AICtab(mx1, mx2, mx2log)
-mone = mle2(87 ~ dbinom(size=137, prob=prob), start=list(prob=0.5), data=dr)
-summary(mone)
 
+abline(mx2)
+AICtab(mx1, mx2, mx3)
+anova(mx3, mx1)
+
+pp = predict(mx3)
 
 p1 = ggplot(data=dr, aes(x = diff, y = p)) + geom_point(alpha=1, position='jitter') +
-	stat_smooth(method='loess', fill='NA') +
-	stat_smooth(method="loess",fill=NA,colour="black",linetype=2,geom="ribbon") +
+	#stat_smooth(method='loess', fill='NA') +
+	#stat_smooth(method="loess",fill=NA,colour="black",linetype=2,geom="ribbon") +
 	scale_x_continuous('Difference in gall abundance') + 
 	scale_y_continuous('Proportion on high density branches') +
 	theme_bw() +
 	opts( panel.grid.minor=theme_blank(), panel.grid.major=theme_blank(),
 	axis.title.x = theme_text(vjust = 0)) +
-	geom_hline(aes(yintercept=c(0.5)), linetype=2, lwd=0.5, alpha=0.5)
+	geom_hline(aes(yintercept=c(0.5)), linetype=2, lwd=0.5, alpha=0.5) +
+	geom_smooth(aes(x=dr$diff, y=pp), data=dr, stat='identity')
+	#geom_abline(intercept=0.1959, slope=0.0287139)
 print(p1)
-ggsave('~/Documents/Analysis repos/pref-expt/figs/p~diff.pdf', width=3.5, height=3)
+ggsave('~/Documents/Analysis-repos/pref-expt/figs/p-diff.pdf', width=3.5, height=3)
 
 
 hist(dr$p)
