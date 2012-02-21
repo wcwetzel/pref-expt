@@ -79,5 +79,70 @@ mbeta2 = mle2(I(dr$p-0.01) ~ dbeta(shape1 = a,
 	start=list(a=0.6, b1=-0.8, b2=3.6), data=dr, method='SANN')
 summary(mbeta2)
 
-	
-	
+
+## proper beta regression with parm for mean and precision ##
+## 26 Jan 2012 ##
+
+hist(dr$p, xlim=c(0,1))
+lines(density(dr$p))
+
+logistic = function(x){ 1 / (1 + exp(-x))}
+
+dr$p.corr = dr$p
+dr$p.corr[dr$p.corr==1] = 0.999
+#dr$p.corr = dr$p - 0.001
+
+mu = 0.9
+theta = 1
+curve(dbeta(x, shape1=mu * theta, shape2=(1 - logistic(mu)) * theta, log=TRUE), 0,1)
+dbeta(c(0,0.0001,0.01, 0.9999, 0.99, 1), shape1=mu * theta, shape2=(1 - logistic(mu)) * theta)
+dbeta(dr$p, shape1=mu * theta, shape2=(1 - logistic(mu)) * theta, log=TRUE)
+dbeta(dr$p.corr, shape1=mu * theta, shape2=(1 - logistic(mu)) * theta, log=TRUE)
+
+# models
+
+m0 = mle2(p.corr ~ dbeta(shape1 = logistic(mu) * theta, 
+	shape2 = (1 - logistic(mu)) * theta), 
+	start=list(mu=0, theta=0.001),
+	data=dr, method='Nelder-Mead')
+
+m1 = mle2(p.corr ~ dbeta(shape1 = logistic(b0 + b1 * diff) * theta, 
+	shape2 = (1 - logistic(b0 + b1 * diff)) * theta), 
+	start=list(b0 = 0.854, b1=0.1, theta=1.468),
+	data=dr, method='Nelder-Mead')
+
+m1.notlogistic = mle2(p.corr ~ dbeta(shape1 = (b0 + b1 * diff) * theta, 
+	shape2 = (1 - (b0 + b1 * diff)) * theta), 
+	start=list(b0 = 0.5, b1=0.01, theta=1),
+	data=dr, method='Nelder-Mead')
+
+m2 = mle2(p.corr ~ dbeta(shape1 = logistic(b0 + b1 * log(diff)) * theta, 
+	shape2 = (1 - logistic(b0 + b1 * log(diff))) * theta), 
+	start=list(b0 = 0, b1=0.01, theta=10),
+	data=dr, method='Nelder-Mead')
+
+AICtab(m0,m1,m2,mx3)
+anova(m0,m1)
+
+plot(p.corr ~ diff, data=dr)
+newdiff = min(dr$diff):max(dr$diff)
+m1predicted = logistic(coef(m1)['b0'] + coef(m1)['b1'] * newdiff)
+points(m1predicted ~ newdiff, type='l')
+
+m1.notlogistic.predicted = coef(m1.notlogistic)['b0'] + coef(m1.notlogistic)['b1'] * newdiff
+points(m1.notlogistic.predicted ~ newdiff, type='l', lty=2)
+
+plot(p.corr ~ log(diff), data=dr)
+m2predicted = logistic(coef(m2)['b0'] + coef(m2)['b1'] * log(newdiff))
+points(m2predicted ~ log(newdiff), type='l')
+
+
+
+m1.profile = profile(m1)
+m2.profile = profile(m2)
+
+m1.ci = confint(m1.profile)
+m2.ci = confint(m2.profile)
+
+logistic(m1.ci)
+logistic(m2.ci)
